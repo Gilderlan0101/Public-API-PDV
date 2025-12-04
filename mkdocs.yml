@@ -1,0 +1,9 @@
+site_name: Pypdv
+
+nav:
+  - Home: index.md
+  - Start: start.md
+
+theme:
+  name: readthedocs
+  favicon: img/icon.ico
