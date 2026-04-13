@@ -26,23 +26,25 @@ async def lifespan(app: FastAPI):
     #  Inicializa banco usando a nova configuração
     try:
         if await init_database():
-            LOGGER.info('✅ Banco de dados iniciado e tabelas criadas!')
+            LOGGER.info('[200] Banco de dados iniciado e tabelas criadas!')
             # await create_mock_data_and_sell_all_stock()  # Descomente se necessário
         else:
-            LOGGER.error('❌ Falha ao inicializar banco de dados')
+            LOGGER.error('[200] Falha ao inicializar banco de dados')
             # Não levantamos erro aqui para não derrubar o server se o banco falhar momentaneamente,
             # mas em produção idealmente deve falhar.
     except Exception as e:
-        LOGGER.error(f'❌ Erro crítico no banco: {e}')
+        LOGGER.error(f'[500] Erro crítico no banco: {e}')
 
     yield
 
     await close_database()
-    LOGGER.info('🧱 Banco de dados encerrado com sucesso.')
+    LOGGER.info('[200] Banco de dados encerrado com sucesso.')
 
 
 class Server:
     def __init__(self):
+        os.system('clear')
+
         # Correção do erro "dict is not callable":
         # Verificamos se get_api_metadata é executável antes de chamar.
         # Se for um dict (erro comum de import), usamos ele direto.
@@ -88,32 +90,32 @@ class Server:
         """Configura rotas do sistema e health checks."""
         from datetime import datetime
 
-        @self.api.get('/', tags=['🏠 Sistema'])
+        @self.api.get('/', tags=['System'])
         async def root():
             """Endpoint raiz com informações do sistema."""
             return {
-                'message': '🚀 Nahtec PDV API está rodando!',
+                'message': ' System is run!',
                 'version': '0.1.0',
                 'status': 'online',
                 'docs': '/docs',
                 'redoc': '/redoc',
             }
 
-        @self.api.get('/health', tags=['🏠 Sistema'])
+        @self.api.get('/health', tags=['system'])
         async def health_check():
             """Health check da aplicação."""
             return {
                 'status': 'healthy',
                 'timestamp': datetime.utcnow(),
-                'service': 'nahtec-pdv-api',
+                'service': 'DevOrbit tech',
                 'version': '1.0.0',
             }
 
-        @self.api.get('/api/v1/info', tags=['🏠 Sistema'])
+        @self.api.get('/api/v1/info', tags=['System'])
         async def system_info():
             """Informações detalhadas do sistema."""
             return {
-                'name': 'nahtec PDV',
+                'name': 'DevOrbit tech',
                 'version': '0.1.0',
                 'description': 'Sistema completo de Ponto de Venda',
                 'developer': 'Gilderlan silva',
@@ -158,11 +160,11 @@ class Server:
         if environment == 'development':
             LOGGER.info('Modo: Desenvolvimento ATIVO')
             # CORREÇÃO: Adicionado ** para desempacotar o dicionário
-            uvicorn.run(**start.get('development'))
+            uvicorn.run(**start.get('development'))   # type:ignore
         else:
             LOGGER.info('Modo: Produção ATIVO')
             # CORREÇÃO: Adicionado ** para desempacotar o dicionário
-            uvicorn.run(**start.get('production'))
+            uvicorn.run(**start.get('production'))   # type:ignore
 
 
 # Instância global do app
@@ -173,22 +175,22 @@ def main():
     """
     Função principal para executar o servidor Qodo PDV.
     """
-    print('🚀 Iniciando Qodo PDV Server...')
-    print('📊 Sistema de Ponto de Venda - Qodo Tech')
-    print('🔗 API disponível em: http://0.0.0.0:8000')
-    print('📚 Documentação: http://0.0.0.0:8000/docs')
-    print('🔍 Redoc: http://0.0.0.0:8000/redoc')
-    print('❤️  Health Check: http://0.0.0.0:8000/health')
-    print('⏹️  Para parar o servidor, pressione Ctrl+C')
-    print('-' * 60)
+    LOGGER.info('-' * 60)
+    LOGGER.info(' Iniciando Qodo PDV Server...')
+    LOGGER.info(' Sistema de Ponto de Venda - Qodo Tech')
+    LOGGER.info(' API disponível em: http://0.0.0.0:8000')
+    LOGGER.info(' Documentação: http://0.0.0.0:8000/docs')
+    LOGGER.info(' Redoc: http://0.0.0.0:8000/redoc')
+    LOGGER.info('  Health Check: http://0.0.0.0:8000/health')
+    LOGGER.info('-' * 60)
 
     try:
         server = Server()
         server.run()
     except KeyboardInterrupt:
-        print('\n🛑 Servidor interrompido pelo usuário')
+        LOGGER.info('\n🛑 Servidor interrompido pelo usuário')
     except Exception as e:
-        print(f'❌ Erro ao iniciar servidor: {e}')
+        print(f'|:500:| Erro ao iniciar servidor: {e}')
         LOGGER.error(f'Erro ao iniciar servidor: {e}')
 
 
