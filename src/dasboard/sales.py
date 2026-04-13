@@ -97,7 +97,8 @@ async def query_of_all_sales(company_id: int):
         # Total de itens vendidos hoje (FORA do loop)
         total_items_sold_today = (
             daily_aggregation.total_items_sold
-            if daily_aggregation and daily_aggregation.total_items_sold is not None
+            if daily_aggregation
+            and daily_aggregation.total_items_sold is not None
             else 0
         )
 

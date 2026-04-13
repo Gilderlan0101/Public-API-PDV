@@ -167,7 +167,9 @@ class RouterManager:
         self.routers['marketplace'].include_router(marketplace)
 
         # ===== INVENTÁRIO =====
-        from .products.inventario.label_generator import inventory_router as label
+        from .products.inventario.label_generator import (
+            inventory_router as label,
+        )
         from .products.inventario.stock_entry_controller import (
             inventory_router as stoke,
         )

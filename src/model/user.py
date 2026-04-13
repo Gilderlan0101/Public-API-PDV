@@ -14,7 +14,7 @@ from src.model.product import Produto, ProdutoArquivado
 
 
 class Usuario(models.Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     username = fields.CharField(max_length=150)
     email = fields.CharField(max_length=200)
     password = fields.CharField(min_length=4, max_length=100)

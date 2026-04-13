@@ -31,6 +31,5 @@ async def adicionar_produto(
             detail='ID do produto inválido',
         )
 
-
     cart = CartManagerDB(company_id=empresa_id, employee_id=employee_id)
     return await cart.add_produto(product_id=product_id, quantity=quantity)

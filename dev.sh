@@ -4,14 +4,14 @@
 # Isso evita que o servidor suba se houver erro de sintaxe na formatação.
 set -e
 
-echo "🎨 [1/3] Executando Blue (Formatação)..."
+#cho "🎨 [1/3] Executando Blue (Formatação)..."
 # O ponto (.) indica para rodar na raiz/diretório atual recursivamente
 blue .
 
-echo "🧹 [2/3] Executando Isort (Organização de Imports)..."
-isort .
+#echo "🧹 [2/3] Executando Isort (Organização de Imports)..."
+#isort .
 
-echo "🚀 [3/3] Iniciando Servidor (Main.py)..."
+#echo "🚀 [3/3] Iniciando Servidor (Main.py)..."
 # Define explicitamente o ambiente como development para garantir
 export ENVIRONMENT=development
 

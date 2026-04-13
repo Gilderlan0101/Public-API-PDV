@@ -8,11 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr, ValidationError
 
-from src.auth.auth_jwt import (
-    ALGORITHM,
-    JWT_SECRET_KEY,
-    verify_password,
-)
+from src.auth.auth_jwt import ALGORITHM, JWT_SECRET_KEY, verify_password
 from src.logs.infos import LOGGER
 from src.model.caixa import Caixa
 from src.model.employee import Employees

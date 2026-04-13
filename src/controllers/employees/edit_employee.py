@@ -4,9 +4,9 @@ import tortoise.exceptions
 from fastapi import HTTPException, status
 
 from src.auth.auth_jwt import get_hashed_password
-from src.model.employee import (  # Assumindo que Employees é seu modelo Tortoise ORM
+from src.model.employee import (
     Employees,
-)
+)  # Assumindo que Employees é seu modelo Tortoise ORM
 
 
 class EmployeeUpdater:

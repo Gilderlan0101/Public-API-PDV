@@ -1,85 +1,124 @@
-import importlib
+import sys
 import unittest
-from unittest.mock import AsyncMock, patch
+from pathlib import Path
+from unittest.mock import AsyncMock, patch, MagicMock
 
-# Recarregar o módulo para garantir que os patches funcionem
-import src.controllers.caixa.cash_controller
+# Configuracao do diretorio raiz para o sys.path
+DIR_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(DIR_ROOT) not in sys.path:
+    sys.path.append(str(DIR_ROOT))
 
-importlib.reload(src.controllers.caixa.cash_controller)
 from src.controllers.caixa.cash_controller import CashController
 
 
 class TestCashControllerDebug(unittest.IsolatedAsyncioTestCase):
-    def test_import_paths(self):
-        """Teste para verificar se os imports estão corretos"""
-        print('=== DEBUG PATHS ===')
-        print(f'CashController module: {CashController.__module__}')
-        print('===================')
+    """
+    Testes unitarios para o CashController garantindo compatibilidade assincrona.
+    """
 
-    @patch('src.controllers.caixa.cash_controller.Employees.get_or_none')
+    @patch(
+        'src.controllers.caixa.cash_controller.Employees.get_or_none',
+        new_callable=AsyncMock,
+    )
     async def test_simple_case(self, mock_employee_get):
-        """Teste mais simples para isolar o problema"""
-        print('=== TEST SIMPLE CASE ===')
+        """
+        Valida a busca inicial do funcionario com retorno assincrono.
+        """
+        # Configuracao do mock do funcionario
+        mock_employee = MagicMock()
+        mock_employee.id = 2
+        mock_employee.nome = 'Maria'
+        mock_employee_get.return_value = mock_employee
 
-        # ARRANGE - Forma mais segura
-        async def mock_employee_coro():
-            mock_employee = AsyncMock()
-            mock_employee.id = 2
-            mock_employee.usuario_id = 1
-            return mock_employee
-
-        mock_employee_get.side_effect = mock_employee_coro
-
-        # ACT & ASSERT
-        try:
-            result = await CashController.abrir_caixa(
-                funcionario_id=2,
-                saldo_inicial=12.50,
-                nome='Maria',
-                company_id=1,
-            )
-            print(f'Result: {result}')
-        except Exception as e:
-            print(f'Error: {e}')
-            raise
-
-    async def test_with_context_manager(self):
-        """Teste usando context manager para patches"""
+        # Mock para evitar chamadas reais ao banco e tratar o encadeamento assincrono
         with patch(
-            'src.controllers.caixa.cash_controller.Employees.get_or_none'
-        ) as mock_employee_get:
-            # Configurar o mock para retornar um AsyncMock
-            mock_employee = AsyncMock()
-            mock_employee.id = 2
-            mock_employee.usuario_id = 1
-            mock_employee_get.return_value = mock_employee
+            'src.controllers.caixa.cash_controller.Caixa.filter'
+        ) as mock_filter:
+            mock_caixa = AsyncMock()
+            mock_caixa.id = 1
+            mock_caixa.caixa_id = 'CX-001'
 
+            # Criamos uma chain de mocks onde .filter() retorna o mock e .first() e um AsyncMock
+            mock_chain = MagicMock()
+            mock_chain.filter.return_value = mock_chain
+            mock_chain.first = AsyncMock(side_effect=[mock_caixa, None])
+            mock_filter.return_value = mock_chain
+
+            # Patch para a transacao (in_transaction) que agora existe no controller
             with patch(
-                'src.controllers.caixa.cash_controller.Caixa.filter'
-            ) as mock_caixa_filter:
-                # Configurar chain de métodos
-                mock_filter_instance = AsyncMock()
-                mock_filter_instance.first.return_value = None
-                mock_caixa_filter.return_value = mock_filter_instance
+                'src.controllers.caixa.cash_controller.in_transaction'
+            ) as mock_trans:
+                mock_trans.return_value.__aenter__ = AsyncMock()
+                mock_trans.return_value.__aexit__ = AsyncMock()
 
                 with patch(
-                    'src.controllers.caixa.cash_controller.Caixa.create'
-                ) as mock_caixa_create:
-                    mock_caixa = AsyncMock()
-                    mock_caixa_create.return_value = mock_caixa
+                    'src.controllers.caixa.cash_controller.CashMovement.create',
+                    new_callable=AsyncMock,
+                ):
+                    # Execucao do metodo
+                    result = await CashController.open_checkout(
+                        employe_id=2,
+                        initial_balance=12.50,
+                        name='Maria',
+                        company_id=1,
+                    )
 
+                    self.assertIsNotNone(result)
+
+    async def test_with_context_manager(self):
+        """
+        Simula a cadeia completa de abertura de caixa e persistencia.
+        """
+        # Patch assincrono para busca de funcionario
+        with patch(
+            'src.controllers.caixa.cash_controller.Employees.get_or_none',
+            new_callable=AsyncMock,
+        ) as mock_get_emp:
+            emp = MagicMock()
+            emp.nome = 'Maria'
+            mock_get_emp.return_value = emp
+
+            # Patch do filtro de caixa
+            with patch(
+                'src.controllers.caixa.cash_controller.Caixa.filter'
+            ) as mock_filter:
+                caixa_mock = AsyncMock()
+                caixa_mock.aberto = False
+                caixa_mock.id = 10
+                caixa_mock.caixa_id = 'CX-99'
+
+                # Configuracao da chain de filtros: Caixa.filter().first()
+                mock_chain = MagicMock()
+                mock_chain.filter.return_value = mock_chain
+                # O controller chama .first() duas vezes (uma para o caixa, outra para checar se ha aberto)
+                mock_chain.first = AsyncMock(side_effect=[caixa_mock, None])
+                mock_filter.return_value = mock_chain
+
+                # Patch da transacao do Tortoise ORM (necessario para async with in_transaction)
+                with patch(
+                    'src.controllers.caixa.cash_controller.in_transaction'
+                ) as mock_trans:
+                    mock_trans.return_value.__aenter__ = AsyncMock()
+                    mock_trans.return_value.__aexit__ = AsyncMock()
+
+                    # Patch para criacao de movimento
                     with patch(
-                        'src.controllers.caixa.cash_controller.CashMovement.create'
-                    ):
-                        # ACT
-                        result = await CashController.abrir_caixa(
-                            funcionario_id=2,
-                            saldo_inicial=12.50,
-                            nome='Maria',
+                        'src.controllers.caixa.cash_controller.CashMovement.create',
+                        new_callable=AsyncMock,
+                    ) as mock_mov:
+
+                        # Execucao
+                        result = await CashController.open_checkout(
+                            employe_id=2,
+                            initial_balance=50.0,
+                            name='Caixa Principal',
                             company_id=1,
                         )
 
-                        # ASSERT
+                        # Verificacoes de estado
+                        self.assertTrue(caixa_mock.aberto)
+                        self.assertEqual(caixa_mock.saldo_inicial, 50.0)
+                        mock_mov.assert_called_once()
                         self.assertIsNotNone(result)
 
 

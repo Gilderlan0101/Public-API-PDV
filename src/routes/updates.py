@@ -1,6 +1,8 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
 from src.auth.deps import SystemUser, get_current_user
 from src.dasboard.sales import query_of_all_sales
 
@@ -18,6 +20,7 @@ class SaleItem(BaseModel):
     payment_method: str
     created_at: Optional[str] = None
 
+
 # Modelo principal da resposta do dashboard
 class DashboardResponse(BaseModel):
     total_user_profit: str
@@ -26,6 +29,7 @@ class DashboardResponse(BaseModel):
     total_items_sold_today: int
     total_sales_count_history: int
     sales: List[SaleItem]
+
 
 @allDatas.get('/profit', response_model=DashboardResponse)
 async def profit(

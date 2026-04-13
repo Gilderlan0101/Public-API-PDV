@@ -15,13 +15,13 @@ from src.auth.auth_jwt import ALGORITHM, JWT_SECRET_KEY
 # Assumindo que você tem um cliente Redis Async global (client)
 from src.core.cache import client
 from src.model.employee import Employees
-from src.model.membros import (  # Manter Employees e Membro para o lookup de usuario
+from src.model.membros import (
     Membro,
-)
+)  # Manter Employees e Membro para o lookup de usuario
 from src.model.user import Usuario
-from src.schemas.schema_user import (  # Assumindo que TokenPayload existe
+from src.schemas.schema_user import (
     TokenPayload,
-)
+)  # Assumindo que TokenPayload existe
 
 reuseable_oauth = OAuth2PasswordBearer(
     tokenUrl='/api/v1/auth/login', scheme_name='JWT'

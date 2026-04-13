@@ -1,12 +1,12 @@
 import os
 import sys
 import unittest
+from pathlib import Path
 
+DIR_ROOT = Path(__file__).resolve().parent.parent.parent
 from src.auth.auth_jwt import get_hashed_password, verify_password
 
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-)
+sys.path.append(str(DIR_ROOT))
 
 
 class TestAuth(unittest.TestCase):

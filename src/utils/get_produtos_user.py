@@ -15,29 +15,48 @@ async def get_product_by_user(
     name: Optional[str] = None,
     product_id: Optional[int] = None,
 ):
-    """Busca produto pelo usuário, código ou nome."""
+    """
+    Busca um produto específico vinculado a um usuário.
+    Prioriza a busca por código ou nome, utilizando cache Redis para performance.
+    """
 
+    # Geracao da chave de cache baseada nos parametros de busca
     cache_key = f"product:{user_id}:{code or ''}:{name or ''}"
+
+    # Tentativa de recuperacao de dados do cache Redis
     cache = await client.get(cache_key)
 
     if cache:
-        return json.loads(cache)  # volta dict
+        # Retorna o dicionario desserializado se encontrado no cache
+        return json.loads(cache)
 
+    # Inicializacao da query filtrando pelo ID do usuario logado
     query = Produto.filter(usuario_id=user_id)
+
     if code:
         query = query.filter(product_code=code)
     if name:
         query = query.filter(name=name)
 
+    # Caso nenhum parametro de identificacao seja fornecido, a busca e abortada
     if not (code or name):
-        query = query.filter(usuario_id=user_id, id=product_id)
+        # query = query.filter(usuario_id=user_id, id=product_id)
+        return None
 
-    product = await query.first().values()  # <-- pega dict direto
+    # Execucao da query no banco de dados
+    # Armazenamos o resultado do first() para verificar existencia antes de chamar .values()
+    result = await query.first()
 
+    if not result:
+        return None
+
+    # Converte o objeto do modelo para dicionario
+    product = await result.values()
+
+    # Persistencia no cache com tempo de expiracao de 90 segundos
     if product:
-        await client.setex(
-            cache_key, 90, json.dumps(product, default=str)
-        )  # salva no Redis
+        await client.setex(cache_key, 90, json.dumps(product, default=str))
+
     return product
 
 
@@ -45,48 +64,51 @@ async def deep_search(
     user_id: int, product_name: str, target_company: Optional[str] = None
 ):
     """
-    Realiza uma busca aprofundada por um produto...
+    Realiza busca aprofundada por nome de produto em toda a base.
+    Permite filtrar por uma empresa especifica ou buscar de forma global.
     """
 
-    # --- 1. Lógica de Cache (Início) ---
-    cache_key = None  # Definir fora para usar no 'setex'
+    # Configuracao inicial da chave de cache para a busca profunda
+    cache_key = None
     try:
-        # Normaliza a chave para evitar duplicatas (ex: "Ham" vs "ham")
+        # Normalizacao de strings para garantir integridade da chave de cache
         prod_name_key = product_name.lower().strip() if product_name else ''
         company_key = target_company.lower().strip() if target_company else ''
 
         cache_key = f'product:{user_id}:{prod_name_key}:{company_key}'
 
-        # FIX 1: Adicionar 'await' para realmente buscar no Redis
+        # Busca assincrona no Redis
         cache = await client.get(cache_key)
 
         if cache:
-            LOGGER.info('Retonando dados em cache.')
-            return json.loads(cache)  # Agora 'cache' é uma string JSON
-
-        print(f'Cache MISS na função: {cache_key}')
+            LOGGER.info('Dados recuperados via cache Redis.')
+            return json.loads(cache)
 
     except Exception as e:
-        # Se o cache falhar, não quebre a aplicação. Apenas logue e continue.
-        print(f'AVISO: Erro no cache (get): {e}. Buscando no banco...')
-    # --- Fim da Lógica de Cache (Início) ---
+        # Falhas no cache nao impedem a execucao da busca no banco de dados
+        LOGGER.error(f'Falha na leitura do cache: {e}')
 
     try:
         data = []
+
+        # Verificacao de existencia e permissao do usuario requisitante
         user_exists = await Usuario.filter(id=user_id).first()
         if not user_exists:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail='Parece que você ainda não possui um cadastro...',
+                detail='Usuario nao identificado ou sem permissao de acesso.',
             )
 
-        # Busca sem empresa específica
-        if product_name and target_company is None:
-            query = await Produto.filter(
+        # Filtro base utilizando busca parcial (icontains) e carregamento de relacionamento
+        if product_name:
+            query_base = Produto.filter(
                 name__icontains=product_name
             ).prefetch_related('usuario')
-            if query:
-                for product in query:
+
+            # Caso nao haja empresa alvo, retorna todos os produtos que coincidem com o nome
+            if target_company is None:
+                results = await query_base
+                for product in results:
                     data.append(
                         {
                             'id': product.id,
@@ -94,76 +116,56 @@ async def deep_search(
                             if product.usuario
                             else 'N/A',
                             'name': product.name,
-                            'fabricator': product.fabricator
-                            if product.fabricator
-                            else 'Não informado.',
+                            'fabricator': product.fabricator or 'N/A',
                             'cost_price': product.cost_price,
                             'price_uni': product.price_uni,
                             'sale_price': product.sale_price,
-                            'supplier': product.supplier
-                            if product.supplier
-                            else 'não informado.',
+                            'supplier': product.supplier or 'N/A',
                             'image_url': f'https://api.nahtec.com.br/produto/{product.id}/imagem',
                         }
                     )
 
-        # Busca com empresa específica
-        elif product_name and target_company:
-            query = await Produto.filter(
-                name__icontains=product_name
-            ).prefetch_related('usuario')
+            # Caso haja empresa alvo, filtra os resultados em memoria
+            else:
+                results = await query_base
+                target_lower = target_company.lower()
 
-            filtered_products = []
-            for product in query:
-                if (
-                    product.usuario
-                    and product.usuario.company_name.lower()
-                    == target_company.lower()
-                ):
-                    filtered_products.append(product)
+                for product in results:
+                    if (
+                        product.usuario
+                        and product.usuario.company_name.lower()
+                        == target_lower
+                    ):
+                        data.append(
+                            {
+                                'id': product.id,
+                                'company': product.usuario.company_name,
+                                'name': product.name,
+                                'fabricator': product.fabricator or 'N/A',
+                                'cost_price': product.cost_price,
+                                'price_uni': product.price_uni,
+                                'sale_price': product.sale_price,
+                                'supplier': product.supplier or 'N/A',
+                                'image_url': f'https://api.nahtec.com.br/produto/{product.id}/imagem',
+                            }
+                        )
 
-            if filtered_products:
-                for product in filtered_products:
-                    data.append(
-                        {
-                            'id': product.id,
-                            'company': product.usuario.company_name
-                            if product.usuario
-                            else 'N/A',
-                            'name': product.name,
-                            'fabricator': product.fabricator
-                            if product.fabricator
-                            else 'Não informado.',
-                            'cost_price': product.cost_price,
-                            'price_uni': product.price_uni,
-                            'sale_price': product.sale_price,
-                            'supplier': product.supplier
-                            if product.supplier
-                            else 'Não informado.',
-                            'image_url': f'https://api.nahtec.com.br/produto/{product.id}/imagem',
-                        }
-                    )
-
-        # --- 2. Lógica de Cache (Final) ---
+        # Atualizacao do cache com o resultado da busca (lista vazia ou preenchida)
         try:
             if cache_key:
-                # FIX 2: Salvar o resultado (mesmo que seja uma lista vazia [])
-                # FIX 1: Adicionar 'await' para realmente salvar no Redis
                 await client.setex(
                     cache_key, 90, json.dumps(data, default=str)
                 )
-                print(f'Cache SET na função: {cache_key}')
         except Exception as e:
-            print(f'AVISO: Erro no cache (setex): {e}')
-        # --- Fim da Lógica de Cache (Final) ---
+            LOGGER.error(f'Falha ao gravar dados no cache: {e}')
 
-        return data  # Retorna os dados (sejam eles [] ou cheios)
+        return data
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f'Erro na busca aprofundada: {str(e)}')
+        LOGGER.error(f'Erro critico na busca aprofundada: {str(e)}')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Erro interno durante a busca: {str(e)}',
+            detail=f'Erro interno durante o processamento da busca.',
         )

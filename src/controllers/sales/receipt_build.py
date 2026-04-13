@@ -1,167 +1,158 @@
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
+from src.logs.infos import LOGGER
+
+
+def _format_currency(value: Union[float, int, None]) -> str:
+    """Auxiliar interno para formatar valores em Reais."""
+    val = float(value) if value is not None else 0.0
+    return f'R$ {val:.2f}'
+
+
+def _get_val(obj: Any, attr: str, default: Any = 'N/A') -> Any:
+    """Extrai valor de um objeto ou dicionario de forma segura."""
+    if isinstance(obj, dict):
+        return obj.get(attr, default)
+    return getattr(obj, attr, default)
 
 
 async def build_receipt(
-    itens: list[dict],
-    usuario,  # 🔹 CORREÇÃO: Remover type annotation específico, pode ser Usuario object ou dict
+    itens: List[Dict[str, Any]],
+    usuario: Any,
     funcionario_nome: str,
     sale_code: str,
     payment_method: str,
-    valor_recebido: float | None = None,
-    troco: float | None = None,
-    installments: int | None = None,
-    customer_id: int | None = None,
-    cpf: str | None = None,
-) -> dict:
-    """Constrói os dados do recibo (nota fiscal simplificada)"""
+    valor_recebido: Optional[float] = None,
+    troco: Optional[float] = None,
+    installments: Optional[int] = None,
+    customer_id: Optional[int] = None,
+    cpf: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Constroi a estrutura de dados para o recibo (Nota Fiscal simplificada).
+
+    Esta funcao consolida informacoes da empresa, itens vendidos, calculos financeiros
+    e detalhes do pagamento em um dicionario formatado para o cliente final.
+    """
+
+    if not itens or not usuario:
+        LOGGER.error(
+            'Tentativa de gerar recibo com itens ou usuario ausentes.'
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Informacoes de venda insuficientes para gerar o recibo.',
+        )
 
     try:
-        if not itens or not usuario:
-            raise HTTPException(
-                status_code=400,
-                detail='Informações da venda incompletas (build_receipt)',
-            )
-
-        # 🔹 CORREÇÃO: Acessar atributos de forma segura, seja objeto ou dict
-        def get_usuario_attr(attr, default='Não informado (build_receipt)'):
-            if hasattr(usuario, attr):
-                return getattr(usuario, attr, default)
-            elif isinstance(usuario, dict) and attr in usuario:
-                return usuario[attr]
-            else:
-                return default
-
-        # Informações do cliente (caso exista)
-        usuario_id = get_usuario_attr('id', 'N/A')
-        cliente_info = {'Código Interno do Usuário': usuario_id}
-
-        if customer_id:
-            cliente_info['Cliente ID'] = customer_id
-
-        # 🔹 CORREÇÃO: Calcular totais de forma segura
+        # 1. Processamento dos Itens da Venda
+        venda_itens = []
         total_geral = 0.0
         lucro_geral = 0.0
-        venda_itens = []
 
         for item in itens:
             try:
-                quantidade = float(item.get('quantity', 0))
-                preco_total = float(item.get('total_price', 0))
-                lucro_total = float(item.get('lucro_total', 0))
+                qty = float(item.get('quantity', 0))
+                price_total = float(item.get('total_price', 0))
+                profit_total = float(item.get('lucro_total', 0))
 
-                # Calcular preço unitário de forma segura
-                preco_unitario = (
-                    preco_total / quantidade if quantidade > 0 else 0
-                )
+                unit_price = price_total / qty if qty > 0 else 0.0
 
-                total_geral += preco_total
-                lucro_geral += lucro_total
+                total_geral += price_total
+                lucro_geral += profit_total
 
                 venda_itens.append(
                     {
                         'product_name': item.get(
-                            'product_name', 'Produto não informado'
+                            'product_name', 'Produto N/I'
                         ),
-                        'Quantidade': quantidade,
-                        'Preço Unitário': f'R$ {preco_unitario:.2f}',
-                        'Valor Total': f'R$ {preco_total:.2f}',
-                        'Lucro Total': f'R$ {lucro_total:.2f}',
+                        'Quantidade': qty,
+                        'Preço Unitário': _format_currency(unit_price),
+                        'Valor Total': _format_currency(price_total),
+                        'Lucro Total': _format_currency(profit_total),
                     }
                 )
             except (ValueError, TypeError, ZeroDivisionError) as e:
-                print(f'Erro ao processar item: {item}, erro: {e}')
+                LOGGER.warning(
+                    f'Item ignorado no recibo por erro de calculo: {item} | Erro: {e}'
+                )
                 continue
 
-        # 🔹 CORREÇÃO: Montar endereço de forma segura
-        endereco_parts = []
-        for attr in [
-            'street',
-            'home_number',
-            'city',
-            'state',
-            'state_registration',
-        ]:
-            value = get_usuario_attr(attr, '').strip()
-            if value:
-                endereco_parts.append(value)
-
-        endereco = (
-            ', '.join(endereco_parts) if endereco_parts else 'Não informado'
+        # 2. Montagem do Endereco da Empresa
+        addr_fields = ['street', 'home_number', 'city', 'state']
+        addr_parts = [
+            str(_get_val(usuario, f, '')).strip() for f in addr_fields
+        ]
+        endereco_str = (
+            ', '.join([p for p in addr_parts if p]) or 'Endereco nao informado'
         )
 
-        # Base do recibo
-        receipt_data = {
-            'Nota Fiscal': {
-                'Empresa': {
-                    'Razão Social': get_usuario_attr(
-                        'company_name', 'Não informado'
-                    ),
-                    'Nome Fantasia': get_usuario_attr(
-                        'trade_name', 'Não informado'
-                    ),
-                    'CNPJ': get_usuario_attr('cnpj', 'Não informado'),
-                    'Endereço': endereco,
-                    'Inscrição Estadual': get_usuario_attr(
-                        'state_registration', 'Não informado'
-                    ),
-                    'Inscrição Municipal': get_usuario_attr(
-                        'municipal_registration', 'Não informado'
-                    ),
-                    'Operado por': funcionario_nome
-                    or get_usuario_attr('username', 'Não informado'),
-                    'codigo_da_venda': sale_code or 'N/A',
-                },
-                'Venda': venda_itens,
-                'Totais': {
-                    'Valor Total Geral': f'R$ {total_geral:.2f}',
-                    'Lucro Total Geral': f'R$ {lucro_geral:.2f}',
-                    'Quantidade de Itens': len(venda_itens),
-                },
-                'Cliente': cliente_info,
-                'Data': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                'Forma_de_Pagamento': payment_method.upper(),
-            }
-        }
-
-        # 🔹 CORREÇÃO: Adicionar informações de pagamento de forma segura
-        pagamento_info = {}
+        # 3. Informacoes de Pagamento
         payment_upper = payment_method.upper()
+        pagamento_info = {}
 
         if payment_upper == 'DINHEIRO':
-            if valor_recebido is not None:
-                pagamento_info[
-                    'Valor Recebido'
-                ] = f'R$ {float(valor_recebido):.2f}'
-            else:
-                pagamento_info['Valor Recebido'] = 'Não informado'
-
-            if troco is not None:
-                pagamento_info['Troco'] = f'R$ {float(troco):.2f}'
-            else:
-                pagamento_info['Troco'] = 'R$ 0.00'
-
+            pagamento_info['Valor Recebido'] = (
+                _format_currency(valor_recebido)
+                if valor_recebido is not None
+                else 'N/I'
+            )
+            pagamento_info['Troco'] = _format_currency(troco)
         elif payment_upper == 'CARTAO':
-            if installments:
-                pagamento_info['Parcelas'] = int(installments)
-            else:
-                pagamento_info['Parcelas'] = 'À vista'
-
-        elif payment_upper == 'NOTA' and customer_id:
+            pagamento_info['Parcelas'] = (
+                int(installments) if installments else 'A vista'
+            )
+        elif payment_upper == 'NOTA':
             pagamento_info['Tipo'] = 'Venda em Nota'
             pagamento_info['Cliente ID'] = customer_id
-
         elif payment_upper == 'PARCIAL':
             pagamento_info['Tipo'] = 'PARCIAL'
             if cpf:
                 pagamento_info['CPF Cliente'] = cpf
 
-        # Adicionar seção de pagamento apenas se houver informações
+        # 4. Construcao do Dicionario Final (Mantendo estrutura original)
+        receipt_data = {
+            'Nota Fiscal': {
+                'Empresa': {
+                    'Razão Social': _get_val(usuario, 'company_name', 'N/A'),
+                    'Nome Fantasia': _get_val(usuario, 'trade_name', 'N/A'),
+                    'CNPJ': _get_val(usuario, 'cnpj', 'N/A'),
+                    'Endereço': endereco_str,
+                    'Inscrição Estadual': _get_val(
+                        usuario, 'state_registration', 'N/I'
+                    ),
+                    'Inscrição Municipal': _get_val(
+                        usuario, 'municipal_registration', 'N/I'
+                    ),
+                    'Operado por': funcionario_nome
+                    or _get_val(usuario, 'username', 'N/A'),
+                    'codigo_da_venda': sale_code or 'N/A',
+                },
+                'Venda': venda_itens,
+                'Totais': {
+                    'Valor Total Geral': _format_currency(total_geral),
+                    'Lucro Total Geral': _format_currency(lucro_geral),
+                    'Quantidade de Itens': len(venda_itens),
+                },
+                'Cliente': {
+                    'Código Interno do Usuário': _get_val(
+                        usuario, 'id', 'N/A'
+                    ),
+                    'Cliente ID': customer_id if customer_id else 'N/A',
+                },
+                'Data': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                'Forma_de_Pagamento': payment_upper,
+                'Observações': 'Venda registrada com sucesso no sistema PDV.',
+            }
+        }
+
+        # Insercao de campos de pagamento se houver dados
         if pagamento_info:
             receipt_data['Nota Fiscal']['Pagamento'] = pagamento_info
 
-        # 🔹 CORREÇÃO: Adicionar valor_recebido e troco no nível superior se necessário
+        # Insercao de valores brutos no nivel superior da Nota para compatibilidade
         if valor_recebido is not None:
             receipt_data['Nota Fiscal']['valor_recebido'] = float(
                 valor_recebido
@@ -169,17 +160,14 @@ async def build_receipt(
         if troco is not None:
             receipt_data['Nota Fiscal']['troco'] = float(troco)
 
-        receipt_data['Nota Fiscal'][
-            'Observações'
-        ] = 'Venda registrada com sucesso no sistema PDV.'
-
         return receipt_data
 
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f'Erro detalhado ao construir recibo build_receipt: {str(e)}')
+        LOGGER.error(
+            f'Erro critico na geracao do recibo {sale_code}: {e}',
+            exc_info=True,
+        )
         raise HTTPException(
-            status_code=500,
-            detail=f'Erro interno ao gerar recibo build_receipt: {str(e)}',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Erro interno ao processar os dados do recibo.',
         )
