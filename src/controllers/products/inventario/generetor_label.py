@@ -11,7 +11,6 @@ from tortoise.transactions import in_transaction
 # REMOVIDA A IMPORTAÇÃO: from src.utils.sales_code_generator import lot_bar_code_size
 from src.model.product import Produto
 from src.model.sale import Sales
-
 # Dependências locais (mantidas em português nos comentários)
 from src.utils.get_produtos_user import get_product_by_user
 

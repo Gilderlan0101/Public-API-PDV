@@ -8,16 +8,13 @@ from pydantic import BaseModel
 
 from src.auth.deps import SystemUser, get_current_user
 from src.controllers.payments.partial.create_depts import Person
-from src.controllers.payments.partial.process_partial_payments import (
-    PartialPayment,
-)
+from src.controllers.payments.partial.process_partial_payments import \
+    PartialPayment
 from src.controllers.payments.partial.views_depts import ViewsAllDepts
 from src.model.partial import Partial, finished_debts
 from src.routes.customer.customer_registration import customers
-from src.schemas.payments.payment_methods import (
-    RegisterUserForPartialMode,
-    VendaParcialData,
-)
+from src.schemas.payments.payment_methods import (RegisterUserForPartialMode,
+                                                  VendaParcialData)
 
 # Configuração de logging
 LOGGER = logging.getLogger(__name__)

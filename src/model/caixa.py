@@ -54,9 +54,8 @@ class Caixa(models.Model):
         Sobrescreve save para gerar caixa_id único para a empresa antes de salvar
         """
         if not self.caixa_id and self.usuario_id:
-            from src.utils.sales_code_generator import (
-                generator_code_to_checkout,
-            )
+            from src.utils.sales_code_generator import \
+                generator_code_to_checkout
 
             self.caixa_id = await generator_code_to_checkout(self.usuario_id)
 

@@ -7,10 +7,7 @@ from src.auth.deps import SystemUser, get_current_user
 from src.model.customers import Customer, ZoneInfo
 from src.model.employee import Employees
 from src.schemas.customers.schema_customers import (
-    GetCustomers,
-    SchemasCustomer,
-    SchemasCustomerCreditUpdate,
-)
+    GetCustomers, SchemasCustomer, SchemasCustomerCreditUpdate)
 
 customers = APIRouter(tags=['Customers'])
 

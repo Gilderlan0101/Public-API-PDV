@@ -6,9 +6,9 @@ from zoneinfo import ZoneInfo
 from tortoise.exceptions import DoesNotExist
 
 from src.core.cache import client
+from src.logs.infos import LOGGER
 from src.model.product import Produto
 from src.model.user import Usuario
-from src.logs.infos import LOGGER
 
 # Configuracao de fuso horario e tempo de cache
 TZ = ZoneInfo('America/Sao_Paulo')

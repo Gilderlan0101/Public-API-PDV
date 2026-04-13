@@ -1,10 +1,10 @@
-import os
-import sys
 import asyncio
+import os
 import random
 import re
-from pathlib import Path
+import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 # Configuracao de path para reconhecimento do modulo src
@@ -18,14 +18,14 @@ from tortoise.transactions import in_transaction
 
 # Importacoes do projeto
 from src.auth.auth_jwt import get_hashed_password
+from src.conf.database import TORTOISE_ORM
 from src.controllers.payments.pix import PixCreateRequest, PixService
+from src.logs.infos import LOGGER
 from src.model.caixa import Caixa
 from src.model.customers import Customer
 from src.model.employee import Employees
 from src.model.product import Produto
 from src.model.user import Usuario
-from src.logs.infos import LOGGER
-from src.conf.database import TORTOISE_ORM
 
 # Configuracoes globais
 FAKE = Faker('pt_BR')

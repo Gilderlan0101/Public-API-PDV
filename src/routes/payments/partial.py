@@ -2,16 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.auth.deps import SystemUser, get_current_user
 from src.auth.deps_employes import SystemEmployees, get_current_employee
-from src.controllers.payments.partial.process_partial_payments import (
-    PartialPayment,
-)
+from src.controllers.payments.partial.process_partial_payments import \
+    PartialPayment
 from src.controllers.payments.partial.views_depts import ViewsAllDepts
 from src.logs.infos import LOGGER
 from src.model.partial import Partial
-from src.schemas.payments.payment_methods import (
-    InputData,
-    ReceivePaymentPartial,
-)
+from src.schemas.payments.payment_methods import (InputData,
+                                                  ReceivePaymentPartial)
 from src.utils.get_produtos_user import get_product_by_user
 
 partial = APIRouter(prefix='/partial')

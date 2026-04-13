@@ -1,29 +1,15 @@
 from typing import List, Optional
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    EmailStr,
-    Field,
-    HttpUrl,
-    model_validator,
-)
+from pydantic import (BaseModel, ConfigDict, EmailStr, Field, HttpUrl,
+                      model_validator)
 
-from src.schemas.fornecedor.schemas_fornecedor import (
-    Address,
-    BankAccount,
-    CNPJType,
-    ContactPerson,
-    CPFType,
-    IEStatus,
-    IEType,
-    PaymentTerm,
-    Phone,
-    SupplierBase,
-    SupplierStatus,
-    SupplierType,
-    TaxRegime,
-)
+from src.schemas.fornecedor.schemas_fornecedor import (Address, BankAccount,
+                                                       CNPJType, ContactPerson,
+                                                       CPFType, IEStatus,
+                                                       IEType, PaymentTerm,
+                                                       Phone, SupplierBase,
+                                                       SupplierStatus,
+                                                       SupplierType, TaxRegime)
 
 
 class SupplierUpdate(BaseModel):

@@ -5,16 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 
 from src.auth.deps import SystemUser, get_current_user
-from src.controllers.payments.pix import (
-    GenerateQRCodeFor,
-    PixCreateRequest,
-    PixQRCodeResponse,
-    PixService,
-)
-from src.schemas.payments.accounts_pix import (
-    PixAccountResponse,
-    PixAccountsList,
-)
+from src.controllers.payments.pix import (GenerateQRCodeFor, PixCreateRequest,
+                                          PixQRCodeResponse, PixService)
+from src.schemas.payments.accounts_pix import (PixAccountResponse,
+                                               PixAccountsList)
 
 router = APIRouter()
 

@@ -6,7 +6,6 @@ from tortoise.expressions import Q
 from tortoise.transactions import atomic
 
 from src.controllers.car.cart_control import CartManagerDB
-
 # Certifique-se de que os imports estão corretos
 from src.controllers.sales.sales import Checkout
 from src.model.product import Produto

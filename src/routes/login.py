@@ -4,22 +4,13 @@ import json
 import uuid
 from typing import Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Request,
-    Response,
-    status,
-)
+from fastapi import (APIRouter, Depends, HTTPException, Request, Response,
+                     status)
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
-from src.auth.auth_jwt import (
-    create_access_token,
-    create_refresh_token,
-    verify_password,
-)
+from src.auth.auth_jwt import (create_access_token, create_refresh_token,
+                               verify_password)
 from src.auth.deps import reuseable_oauth
 from src.core.cache import client
 from src.logs.infos import LOGGER

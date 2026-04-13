@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Tuple
 
 from fastapi import HTTPException, status
+
 from src.logs.infos import LOGGER
 from src.model.partial import Partial
 

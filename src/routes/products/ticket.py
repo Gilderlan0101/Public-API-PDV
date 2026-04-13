@@ -8,10 +8,8 @@ from tortoise.transactions import in_transaction
 from src.auth.deps import get_current_user
 from src.model.tickets import Ticket
 from src.model.user import Usuario
-from src.schemas.fornecedor.schema_ticket import (
-    TicketCreateSchema,
-    TicketReadSchema,
-)
+from src.schemas.fornecedor.schema_ticket import (TicketCreateSchema,
+                                                  TicketReadSchema)
 
 router = APIRouter(tags=['Tickets'])
 

@@ -8,14 +8,11 @@ from tortoise.expressions import F
 from tortoise.transactions import atomic
 
 # Importações internas necessárias
-from src.model.product import (
-    Produto,  # Necessário para atualizar e arquivar
-    ProdutoArquivado,
-)
+from src.model.product import Produto  # Necessário para atualizar e arquivar
+from src.model.product import ProdutoArquivado
 from src.model.user import Usuario  # Necessário para a busca
-from src.utils.get_produtos_user import (
-    deep_search,
-)  # Assume que deep_search retorna dados para busca
+from src.utils.get_produtos_user import \
+    deep_search  # Assume que deep_search retorna dados para busca
 
 
 @dataclass

@@ -1,7 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # Configuracao do diretorio raiz para o sys.path
 DIR_ROOT = Path(__file__).resolve().parent.parent.parent

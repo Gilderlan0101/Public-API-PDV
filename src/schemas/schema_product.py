@@ -1,11 +1,12 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Annotated, Optional
+from re import sub as regex_sub
+from typing import Annotated, Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, root_validator, validator
 
 # ======================================
-# 🔹 Type Aliases for Validation
+# Type Aliases for Validation
 # ======================================
 Str50 = Annotated[str, Field(min_length=1, max_length=50)]
 Str150 = Annotated[str, Field(min_length=2, max_length=150)]
@@ -14,11 +15,120 @@ NonNegativeFloat = Annotated[float, Field(ge=0)]
 
 
 # ======================================
-# 🔹 Product Enums
+# Helper Functions for Data Treatment
+# ======================================
+def remove_special_chars(value: str) -> str:
+    """Remove special characters and normalize string"""
+    if not value:
+        return value
+    # Remove accents and special chars
+    normalized = regex_sub(r'[^\w\s]', '', value)
+    return normalized.strip()
+
+
+def normalize_boolean_string(value: Union[str, bool, None]) -> str:
+    """Normalize boolean-like strings to 'Sim' or 'Não'"""
+    if value is None:
+        return 'Não'
+
+    if isinstance(value, bool):
+        return 'Sim' if value else 'Não'
+
+    if isinstance(value, str):
+        value_clean = value.lower().strip()
+        true_values = ['sim', 's', 'yes', 'y', 'true', '1', 'ativo', 'active']
+        false_values = [
+            'nao',
+            'não',
+            'n',
+            'no',
+            'false',
+            '0',
+            'inativo',
+            'inactive',
+        ]
+
+        if value_clean in true_values:
+            return 'Sim'
+        elif value_clean in false_values:
+            return 'Não'
+
+    return 'Não'
+
+
+def normalize_product_type(value: Union[str, None]) -> str:
+    """Normalize product type string"""
+    if not value:
+        return 'Comum'
+
+    type_mapping = {
+        'comum': 'Comum',
+        'fracionado': 'Fracionado',
+        'adicional': 'Adicional',
+        'valor editavel': 'Valor editável',
+        'valor_editavel': 'Valor editável',
+        'valor-editavel': 'Valor editável',
+        'materia prima': 'Matéria prima',
+        'materia_prima': 'Matéria prima',
+        'materia-prima': 'Matéria prima',
+        'eletronico': 'Eletrônico',
+        'eletrônico': 'Eletrônico',
+    }
+
+    value_clean = value.lower().strip()
+    return type_mapping.get(value_clean, 'Comum')
+
+
+def normalize_sector(value: Union[str, None]) -> str:
+    """Normalize sector string"""
+    if not value:
+        return 'Fabricação Própria'
+
+    sector_mapping = {
+        'fabricacao propria': 'Fabricação Própria',
+        'fabricacao_propria': 'Fabricação Própria',
+        'fabricação própria': 'Fabricação Própria',
+        'local': 'Fabricação Própria',
+        'revenda': 'Revenda',
+        'terceiros': 'Revenda',
+    }
+
+    value_clean = value.lower().strip()
+    return sector_mapping.get(value_clean, 'Fabricação Própria')
+
+
+def normalize_unit(value: Union[str, None]) -> str:
+    """Normalize unit of measurement"""
+    if not value:
+        return 'Unidade'
+
+    unit_mapping = {
+        'unidade': 'Unidade',
+        'un': 'Unidade',
+        'und': 'Unidade',
+        'kg': 'Kilograma (kg)',
+        'kilograma': 'Kilograma (kg)',
+        'g': 'Grama (g)',
+        'grama': 'Grama (g)',
+        'l': 'Litro (l)',
+        'litro': 'Litro (l)',
+        'ml': 'Mililitro (ml)',
+        'mililitro': 'Mililitro (ml)',
+        'cx': 'Caixa',
+        'caixa': 'Caixa',
+        'pct': 'Pacote',
+        'pacote': 'Pacote',
+        'fardo': 'Fardo',
+    }
+
+    value_clean = value.lower().strip()
+    return unit_mapping.get(value_clean, value)
+
+
+# ======================================
+# Product Enums
 # ======================================
 class ProductGroup(str, Enum):
-    """Main product categories"""
-
     BEVERAGES = 'Bebidas'
     FOODS = 'Alimentos'
     FRUITS = 'Frutas'
@@ -45,7 +155,6 @@ class ProductGroup(str, Enum):
     OTHERS = 'Outros'
 
 
-# 🔹 Subgroups
 class BeveragesSubGroup(str, Enum):
     REFRIGERANTES = 'Refrigerantes'
     SUCOS = 'Sucos'
@@ -119,15 +228,10 @@ class SnacksSubGroup(str, Enum):
     PETISCOS = 'Petiscos'
 
 
-# Adicione os subgrupos restantes da mesma forma, se necessário...
-
-
 # ======================================
-# 🔹 Units
+# Units
 # ======================================
 class UnitOfMeasurement(str, Enum):
-    """Unit of measurement for products"""
-
     UNIT = 'Unidade'
     KG = 'Kilograma (kg)'
     GRAM = 'Grama (g)'
@@ -148,25 +252,29 @@ class UnitOfMeasurement(str, Enum):
 
 
 # ======================================
-# 🔹 Product Status / Type
+# Product Status / Type
 # ======================================
 class ProductSector(str, Enum):
-    """Defines product origin"""
-
     LOCAL = 'Fabricação Própria'
     RESALE = 'Revenda'
 
 
 class ProductStatus(str, Enum):
-    """Defines if product is active or used in flags"""
-
     YES = 'Sim'
     NO = 'Não'
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            normalized = normalize_boolean_string(value)
+            if normalized == 'Sim':
+                return cls.YES
+            elif normalized == 'Não':
+                return cls.NO
+        return cls.NO
+
 
 class ProductType(str, Enum):
-    """Defines the type of product"""
-
     COMMON = 'Comum'
     FRACTIONAL = 'Fracionado'
     ADDITIONAL = 'Adicional'
@@ -174,10 +282,17 @@ class ProductType(str, Enum):
     RAW_MATERIAL = 'Matéria prima'
     ELECTRONICS = 'Eletrônico'
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            normalized = normalize_product_type(value)
+            for member in cls:
+                if member.value == normalized:
+                    return member
+        return cls.COMMON
+
 
 class TicketType(str, Enum):
-    """Types of sales tickets"""
-
     NEW = 'Novo'
     PROMOTION = 'Promoção'
     COMBO = 'Combo'
@@ -187,45 +302,141 @@ class TicketType(str, Enum):
     LIMITED = 'Edição Limitada'
 
 
+# ======================================
+# Sales Configuration
+# ======================================
 class ApplyingSalesType(BaseModel):
-    """Optional sales application settings for a product"""
-
-    discount: Optional[ProductStatus] = None
-    rate: Optional[ProductStatus] = None
-    balance: Optional[ProductStatus] = None
+    discount: Optional[Union[ProductStatus, str, bool]] = None
+    rate: Optional[Union[ProductStatus, str, bool]] = None
+    balance: Optional[Union[ProductStatus, str, bool]] = None
     valid: Optional[str] = None
 
+    @validator('discount', 'rate', 'balance', pre=True)
+    def normalize_sales_config(cls, v):
+        if v is None:
+            return ProductStatus.NO
+        if isinstance(v, bool):
+            return ProductStatus.YES if v else ProductStatus.NO
+        if isinstance(v, str):
+            normalized = normalize_boolean_string(v)
+            return (
+                ProductStatus.YES if normalized == 'Sim' else ProductStatus.NO
+            )
+        return v
+
+    class Config:
+        use_enum_values = True
+
 
 # ======================================
-# 🔹 Product Schemas
+# Product Schemas
 # ======================================
 class ProductRegisterSchema(BaseModel):
-    """Schema for registering a new product"""
+    """Schema for registering a new product with data normalization"""
 
     name: Str150
     product_code: Str50
-    stock: NonNegativeInt
-    stoke_min: NonNegativeInt
-    stoke_max: NonNegativeInt
+    stock: NonNegativeInt = 0
+    stoke_min: NonNegativeInt = 0
+    stoke_max: NonNegativeInt = 0
     date_expired: Optional[datetime] = None
     fabricator: Optional[str] = None
-    cost_price: NonNegativeFloat
-    price_uni: NonNegativeFloat
-    sale_price: NonNegativeFloat
+    cost_price: NonNegativeFloat = 0.0
+    price_uni: NonNegativeFloat = 0.0
+    sale_price: NonNegativeFloat = 0.0
     supplier: Optional[str] = None
     lot_bar_code: Optional[str] = None
     image_url: Optional[str] = None
 
-    # 🔹 Connected enums and options
-    product_type: ProductType
-    active: ProductStatus
+    product_type: Union[ProductType, str, None] = ProductType.COMMON
+    active: Union[ProductStatus, str, bool, None] = ProductStatus.YES
     group: Optional[str] = None
     sub_group: Optional[str] = None
     ticket: Optional[str] = None
-    sector: ProductSector
+    sector: Union[ProductSector, str, None] = ProductSector.LOCAL
     unit: Optional[str] = None
-    controllstoke: ProductStatus
-    sales_config: Optional[ApplyingSalesType] = None
+    controllstoke: Union[ProductStatus, str, bool, None] = ProductStatus.YES
+    sales_config: Optional[
+        Union[ApplyingSalesType, Dict[str, Any], None]
+    ] = None
+
+    @root_validator(pre=True)
+    def normalize_all_fields(cls, values):
+        """Normalize all fields before validation"""
+
+        # Normalize active status
+        if 'active' in values:
+            values['active'] = normalize_boolean_string(values['active'])
+
+        # Normalize controllstoke
+        if 'controllstoke' in values:
+            values['controllstoke'] = normalize_boolean_string(
+                values['controllstoke']
+            )
+
+        # Normalize product_type
+        if 'product_type' in values:
+            values['product_type'] = normalize_product_type(
+                values['product_type']
+            )
+
+        # Normalize sector
+        if 'sector' in values:
+            values['sector'] = normalize_sector(values['sector'])
+
+        # Normalize unit
+        if 'unit' in values:
+            values['unit'] = normalize_unit(values['unit'])
+
+        # Ensure stock max >= stock min
+        if 'stoke_max' in values and 'stoke_min' in values:
+            if values['stoke_max'] < values['stoke_min']:
+                values['stoke_max'] = values['stoke_min']
+
+        # Ensure sale price >= cost price
+        if 'sale_price' in values and 'cost_price' in values:
+            if values['sale_price'] < values['cost_price']:
+                values['sale_price'] = values['cost_price']
+
+        # Handle sales_config
+        if 'sales_config' in values and values['sales_config'] is not None:
+            if isinstance(values['sales_config'], dict):
+                values['sales_config'] = ApplyingSalesType(
+                    **values['sales_config']
+                )
+
+        return values
+
+    @validator('name', 'product_code', pre=True)
+    def clean_string_fields(cls, v):
+        if isinstance(v, str):
+            return remove_special_chars(v)
+        return v
+
+    @validator('cost_price', 'price_uni', 'sale_price', pre=True)
+    def validate_prices(cls, v):
+        if isinstance(v, str):
+            try:
+                # Remove currency symbols and convert
+                cleaned = regex_sub(r'[^\d.,-]', '', v)
+                cleaned = cleaned.replace(',', '.')
+                return float(cleaned)
+            except:
+                return 0.0
+        return v if v is not None else 0.0
+
+    @validator('stock', 'stoke_min', 'stoke_max', pre=True)
+    def validate_stock(cls, v):
+        if isinstance(v, str):
+            try:
+                return int(float(v))
+            except:
+                return 0
+        return v if v is not None else 0
+
+    class Config:
+        use_enum_values = True
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class ProductUpdateSchema(BaseModel):
@@ -246,12 +457,62 @@ class ProductUpdateSchema(BaseModel):
     image_url: Optional[HttpUrl] = None
     description: Optional[str] = None
 
-    # 🔹 Connected enums and options
     product_type: Optional[str] = None
     active: Optional[str] = None
     group: Optional[str] = None
-    sub_group: Optional[str] = None  # Novo campo de subgrupo
+    sub_group: Optional[str] = None
     sector: Optional[str] = None
     unit: Optional[str] = None
     controllstoke: Optional[str] = None
-    sales_config: Optional[str] = None
+    sales_config: Optional[
+        Union[ApplyingSalesType, Dict[str, Any], str]
+    ] = None
+
+    @root_validator(pre=True)
+    def normalize_update_fields(cls, values):
+        """Normalize fields for update"""
+
+        if 'active' in values and values['active'] is not None:
+            values['active'] = normalize_boolean_string(values['active'])
+
+        if 'controllstoke' in values and values['controllstoke'] is not None:
+            values['controllstoke'] = normalize_boolean_string(
+                values['controllstoke']
+            )
+
+        if 'product_type' in values and values['product_type'] is not None:
+            values['product_type'] = normalize_product_type(
+                values['product_type']
+            )
+
+        if 'sector' in values and values['sector'] is not None:
+            values['sector'] = normalize_sector(values['sector'])
+
+        if 'unit' in values and values['unit'] is not None:
+            values['unit'] = normalize_unit(values['unit'])
+
+        if 'sales_config' in values and values['sales_config'] is not None:
+            if isinstance(values['sales_config'], dict):
+                values['sales_config'] = ApplyingSalesType(
+                    **values['sales_config']
+                )
+
+        return values
+
+    class Config:
+        use_enum_values = True
+        extra = 'ignore'
+
+
+# ======================================
+# Response Schema Example
+# ======================================
+class ProductResponseSchema(ProductRegisterSchema):
+    """Schema for product response with ID"""
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

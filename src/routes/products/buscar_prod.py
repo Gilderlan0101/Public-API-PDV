@@ -26,7 +26,7 @@ async def get_product(
             }
 
         product = await get_product_by_user(
-            current_user.empresa_id, code, name
+            int(current_user.empresa_id), code, name
         )
 
         if not product:

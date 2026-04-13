@@ -5,16 +5,8 @@ from datetime import date, datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    EmailStr,
-    Field,
-    HttpUrl,
-    constr,
-    field_validator,
-    model_validator,
-)
+from pydantic import (BaseModel, ConfigDict, EmailStr, Field, HttpUrl, constr,
+                      field_validator, model_validator)
 
 
 # =========================

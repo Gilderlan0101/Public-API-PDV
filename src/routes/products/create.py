@@ -9,10 +9,8 @@ from src.model.product import Produto
 from src.model.user import Usuario
 from src.schemas.schema_product import ProductRegisterSchema
 from src.utils.load_images import load_imgs
-from src.utils.sales_code_generator import (
-    gerar_codigo_venda,
-    lot_bar_code_size,
-)
+from src.utils.sales_code_generator import (gerar_codigo_venda,
+                                            lot_bar_code_size)
 
 load_dotenv()
 

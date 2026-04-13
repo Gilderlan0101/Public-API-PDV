@@ -5,14 +5,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 
 from src.auth.deps import SystemUser, get_current_user
 from src.auth.deps_employes import SystemEmployees, get_current_employee
-from src.controllers.caixa.cash_controller import (
-    CashController,
-    FinalizationObjcts,
-)
+from src.controllers.caixa.cash_controller import (CashController,
+                                                   FinalizationObjcts)
 from src.controllers.car.cart_control import CartManagerDB
-from src.controllers.payments.partial.process_partial_payments import (
-    PartialPayment,
-)
+from src.controllers.payments.partial.process_partial_payments import \
+    PartialPayment
 from src.controllers.sales.delete_sales import delete_or_update_sale
 from src.controllers.sales.note import Note
 from src.controllers.sales.sales import Checkout

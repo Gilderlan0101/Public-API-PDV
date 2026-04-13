@@ -4,10 +4,8 @@ from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from fastapi_sessions.backends.implementations import InMemoryBackend
-from fastapi_sessions.frontends.implementations import (
-    CookieParameters,
-    SessionCookie,
-)
+from fastapi_sessions.frontends.implementations import (CookieParameters,
+                                                        SessionCookie)
 from fastapi_sessions.session_verifier import SessionVerifier
 from pydantic import BaseModel
 

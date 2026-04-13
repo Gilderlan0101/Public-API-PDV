@@ -9,12 +9,10 @@ from tortoise.transactions import in_transaction
 from src.auth.deps import get_current_user
 from src.model.fornecedor import Fornecedor, SupplierStatus
 from src.model.user import Usuario
-from src.schemas.fornecedor.schemas_fornecedor import (
-    SupplierBase,
-    SupplierCreate,
-    SupplierListResponse,
-    SupplierSummary,
-)
+from src.schemas.fornecedor.schemas_fornecedor import (SupplierBase,
+                                                       SupplierCreate,
+                                                       SupplierListResponse,
+                                                       SupplierSummary)
 from src.schemas.fornecedor.update_spplierBase import SupplierUpdate
 
 router = APIRouter()

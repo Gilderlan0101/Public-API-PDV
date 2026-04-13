@@ -212,9 +212,8 @@ async def validating_information(
             else:
                 return {'success': False, 'error': 'Erro ao processar a venda'}
 
-        from src.controllers.stoke.stoke_control import (
-            gerar_relatorio_completo,
-        )
+        from src.controllers.stoke.stoke_control import \
+            gerar_relatorio_completo
 
         report = await gerar_relatorio_completo(admin_user.id)
 

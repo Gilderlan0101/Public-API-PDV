@@ -6,9 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.auth.deps import SystemUser, get_current_user
 from src.controllers.products.inventario.generetor_label import LabelGenerator
-from src.routes.products.inventario.stock_entry_controller import (
-    inventory_router,
-)
+from src.routes.products.inventario.stock_entry_controller import \
+    inventory_router
 
 
 # Usando o router de inventário já definido para o endpoint

@@ -8,6 +8,7 @@ from tortoise.expressions import Q
 from tortoise.transactions import in_transaction
 
 from src.controllers.sales.receipt_build import build_receipt
+from src.logs.infos import LOGGER
 from src.model.customers import Customer
 from src.model.employee import Employees
 from src.model.product import Produto
@@ -15,7 +16,6 @@ from src.model.sale import Sales
 from src.model.user import Usuario
 from src.utils.get_produtos_user import get_product_by_user
 from src.utils.payments_config import VALID_PAYMENT_METHODS
-from src.logs.infos import LOGGER
 
 
 @dataclass

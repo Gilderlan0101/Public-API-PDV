@@ -5,12 +5,10 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.auth.deps import SystemUser, get_current_user
-
 # 💡 Importação da classe de controle de saída de estoque
 from src.controllers.products.inventario.stoke_exit import StockExit
-from src.routes.products.inventario.stock_entry_controller import (
-    inventory_router,
-)
+from src.routes.products.inventario.stock_entry_controller import \
+    inventory_router
 
 
 # Usando o router de inventário já definido

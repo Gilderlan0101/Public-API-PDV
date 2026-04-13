@@ -72,9 +72,8 @@ class CashController:
                 # Se admin nao tem caixa, cria um novo
                 if not caixa:
                     try:
-                        from src.utils.sales_code_generator import (
-                            generator_code_to_checkout,
-                        )
+                        from src.utils.sales_code_generator import \
+                            generator_code_to_checkout
 
                         caixa_id = await generator_code_to_checkout(admin.id)
 

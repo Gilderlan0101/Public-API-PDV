@@ -7,21 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from src.auth.deps import SystemUser, get_current_user
 from src.controllers.delivery.delivery_controller import CreateDelivery
 from src.controllers.delivery.delivery_reports import (
-    assign_delivery_to_driver,
-    gerenciagelivery,
-    get_driver_deliveries,
-    update_delivery_status,
-)
+    assign_delivery_to_driver, gerenciagelivery, get_driver_deliveries,
+    update_delivery_status)
 from src.controllers.delivery.delivery_status import (
-    assign_specific_delivery,
-    get_delivery_status_report,
-    sales_quantity,
-    total_sales,
-    update_payments_status,
-    update_race_status,
-)
+    assign_specific_delivery, get_delivery_status_report, sales_quantity,
+    total_sales, update_payments_status, update_race_status)
 from src.schemas.delivery.schemas_delivery import DeliveryCreate
-
 # TESTE REMOVE QUANDO ESTIVE TUDO OK
 from src.utils.user_or_functional import i_request
 

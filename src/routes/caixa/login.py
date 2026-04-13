@@ -6,25 +6,18 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
-from src.auth.auth_jwt import (
-    create_access_token,
-    create_refresh_token,
-    verify_password,
-)
-from src.auth.deps_employes import (
-    SystemEmployees,
-    get_current_employee,
-    reuseable_oauth,
-)
+from src.auth.auth_jwt import (create_access_token, create_refresh_token,
+                               verify_password)
+from src.auth.deps_employes import (SystemEmployees, get_current_employee,
+                                    reuseable_oauth)
 from src.controllers.caixa.cash_controller import CashController
 from src.core.cache import client
 from src.logs.infos import LOGGER
 from src.model.caixa import Caixa
 from src.model.employee import Employees
 from src.model.user import Usuario
-from src.schemas.login.form_login_checkout import (
-    CustomOAuth2PasswordRequestForm,
-)
+from src.schemas.login.form_login_checkout import \
+    CustomOAuth2PasswordRequestForm
 from src.utils.private_infos import mask_email, mask_password
 
 

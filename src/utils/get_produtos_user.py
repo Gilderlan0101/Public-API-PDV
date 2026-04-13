@@ -17,47 +17,61 @@ async def get_product_by_user(
 ):
     """
     Busca um produto específico vinculado a um usuário.
-    Prioriza a busca por código ou nome, utilizando cache Redis para performance.
+    Usa .values() para garantir que o retorno seja um dicionário puro,
+    facilitando o cache e a velocidade.
     """
 
-    # Geracao da chave de cache baseada nos parametros de busca
-    cache_key = f"product:{user_id}:{code or ''}:{name or ''}"
+    # 1. Normalização dos parâmetros para a chave de cache
+    search_code = str(code).strip() if code else ''
+    search_name = str(name).strip().lower() if name else ''
 
-    # Tentativa de recuperacao de dados do cache Redis
-    cache = await client.get(cache_key)
+    cache_key = (
+        f"product:{user_id}:{search_code}:{search_name}:{product_id or ''}"
+    )
 
-    if cache:
-        # Retorna o dicionario desserializado se encontrado no cache
-        return json.loads(cache)
+    # 2. Tentativa de recuperação rápida no Cache
+    try:
+        cache = await client.get(cache_key)
+        if cache:
+            return json.loads(cache)
+    except Exception as e:
+        LOGGER.error(f'Erro ao ler cache: {e}')
 
-    # Inicializacao da query filtrando pelo ID do usuario logado
+    # 3. Construção da Query
     query = Produto.filter(usuario_id=user_id)
 
     if code:
-        query = query.filter(product_code=code)
-    if name:
-        query = query.filter(name=name)
+        query = query.filter(product_code=search_code)
+    elif name:
+        query = query.filter(name__icontains=search_name)
+    elif product_id:
+        query = query.filter(id=product_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Forneça o código, nome ou ID do produto.',
+        )
 
-    # Caso nenhum parametro de identificacao seja fornecido, a busca e abortada
-    if not (code or name):
-        # query = query.filter(usuario_id=user_id, id=product_id)
-        return None
+    # 4. Execução: .values() extrai os dados como dict direto do banco (mais rápido)
+    product_data = await query.values()
 
-    # Execucao da query no banco de dados
-    # Armazenamos o resultado do first() para verificar existencia antes de chamar .values()
-    result = await query.first()
+    if not product_data:
+        label = search_code or search_name or product_id
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Produto {label} não encontrado.',
+        )
 
-    if not result:
-        return None
+    # 5. Salva no Cache por 1 hora (3600s)
+    try:
+        # Usamos default=str para lidar com campos de data/datetime no dicionário
+        await client.setex(
+            cache_key, 3600, json.dumps(product_data, default=str)
+        )
+    except Exception as e:
+        LOGGER.error(f'Erro ao salvar no cache: {e}')
 
-    # Converte o objeto do modelo para dicionario
-    product = await result.values()
-
-    # Persistencia no cache com tempo de expiracao de 90 segundos
-    if product:
-        await client.setex(cache_key, 90, json.dumps(product, default=str))
-
-    return product
+    return product_data
 
 
 async def deep_search(

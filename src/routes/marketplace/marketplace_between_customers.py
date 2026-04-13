@@ -3,9 +3,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from src.auth.deps import SystemUser, get_current_user
-from src.controllers.marketplace.product_search_service import (
-    CustomerMarketplace,
-)
+from src.controllers.marketplace.product_search_service import \
+    CustomerMarketplace
 
 marketplace = APIRouter()
 

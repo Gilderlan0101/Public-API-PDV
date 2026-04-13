@@ -2,9 +2,8 @@ from fastapi import APIRouter, Depends
 
 from src.auth.deps import get_current_user
 from src.controllers.products.monitoring_products import ProductInfo
-from src.controllers.sales.sales_controller import (
-    information_about_sales_and_products_and_employees,
-)
+from src.controllers.sales.sales_controller import \
+    information_about_sales_and_products_and_employees
 from src.schemas.schema_user import SystemUser
 
 list_products = APIRouter(prefix='/products', tags=['Produtos'])

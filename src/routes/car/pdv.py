@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
 
 from src.auth.deps import SystemUser, get_current_user
-from src.controllers.sales.separate_payment_methods import (
-    separating_sales_by_payments,
-)
+from src.controllers.sales.separate_payment_methods import \
+    separating_sales_by_payments
 
 router = APIRouter()
 
